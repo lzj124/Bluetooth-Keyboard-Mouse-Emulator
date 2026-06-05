@@ -15,6 +15,9 @@ extern BLECharacteristic* mouseInput;
 extern BLECharacteristic* keyboardInput;
 extern bool isConnected;
 
+extern float gyroX;
+extern float gyroZ;
+
 const uint8_t HID_REPORT_MAP[] = {
     // Mouse report
     0x05, 0x01,        // Usage Page (Generic Desktop)
@@ -85,10 +88,10 @@ void initBluetooth();
 void deinitBluetooth();
 bool getBluetoothStatus();
 
-void bluetoothMouse();
+void bluetoothMouse(bool gyroMode);
 void bluetoothKeyboard();
 void sendEmptyReports();
-void handleBluetoothMode(bool mouseMode);
+void handleBluetoothMode(bool mouseMode, bool gyroMode);
 
 class MyBLEServerCallbacks : public BLEServerCallbacks {
 public:

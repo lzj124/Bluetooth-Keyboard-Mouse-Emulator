@@ -3,18 +3,49 @@
 USBHIDMouse mouse;
 USBHIDKeyboard keyboard;
 
-void handleUsbMode(bool mouseMode) {
+void handleUsbMode(bool mouseMode, bool gyroMode) {
     if (mouseMode) {
-        usbMouse();
+        usbMouse(gyroMode);
     } else  {
         usbKeyboard();
     }
     delay(5);
 }
-void usbMouse() {
+
+void usbMouse(bool gyroMode) {
     mouse.begin();
     int moveX = 0;
     int moveY = 0;
+
+    if (gyroMode) {
+        // Gyroscope control: tilt device to move cursor
+        // Deadzone: ignore small movements
+        const float DEADZONE = 5.0f;
+        const float SENSITIVITY = 0.15f;
+
+        if (abs(gyroZ) > DEADZONE) {
+            moveX = (int)(-gyroZ * SENSITIVITY);
+        }
+        if (abs(gyroX) > DEADZONE) {
+            moveY = (int)(-gyroX * SENSITIVITY);  // Invert: tilt forward = cursor up
+        }
+
+        // Button clicks still work in gyro mode
+        Keyboard_Class::KeysState status = M5Cardputer.Keyboard.keysState();
+        if (status.enter) {
+            mouse.press(MOUSE_BUTTON_LEFT);
+        } else if (M5Cardputer.Keyboard.isKeyPressed('\\')) {
+            mouse.press(MOUSE_BUTTON_RIGHT);
+        } else {
+            mouse.release(MOUSE_BUTTON_LEFT);
+            mouse.release(MOUSE_BUTTON_RIGHT);
+        }
+
+        mouse.move(moveX, moveY);
+        return;
+    }
+
+    // Original arrow-key mouse control
     if (M5Cardputer.Keyboard.isPressed()) {
         Keyboard_Class::KeysState status = M5Cardputer.Keyboard.keysState();
 

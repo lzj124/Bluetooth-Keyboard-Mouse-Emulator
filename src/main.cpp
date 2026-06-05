@@ -6,7 +6,13 @@
 
 bool mouseMode = true;
 bool usbMode = true;
+bool gyroMode = false;
+bool gyroAvailable = false;
 bool lastBluetoothStatus = false;
+
+// Gyro data shared across modules
+float gyroX = 0.0f;   // pitch: tilt forward/back → mouse Y
+float gyroZ = 0.0f;   // yaw: turn left/right → mouse X
 
 void selectMode() {
     bool lastMode = !usbMode;
@@ -30,16 +36,26 @@ void selectMode() {
                     break;
                 }
             }
-
         }
         delay(10);
     }
 }
 
 void setup() {
-    // Initialisation du M5Cardputer
     auto cfg = M5.config();
     M5Cardputer.begin(cfg, true);
+    
+    // M5Cardputer.begin() already inits the IMU — just warm it up if available
+    if (M5.Imu.isEnabled()) {
+        gyroAvailable = true;
+        float dummy;
+        for (int i = 0; i < 10; i++) {
+            M5.Imu.update();
+            M5.Imu.getGyroData(&dummy, &dummy, &dummy);
+            delay(5);
+        }
+        gyroAvailable = true;
+    }
     
     setupDisplay();
     displayWelcomeScreen();
@@ -51,17 +67,38 @@ void setup() {
         initBluetooth();
     }
 
-    displayMainScreen(usbMode, mouseMode, getBluetoothStatus());
+    displayMainScreen(usbMode, mouseMode, getBluetoothStatus(), gyroAvailable && gyroMode);
 }
 
 void loop() {
     M5Cardputer.update();
+
+    // Read IMU data if available
+    if (gyroAvailable) {
+        float gy;
+        M5.Imu.update();
+        M5.Imu.getGyroData(&gyroX, &gy, &gyroZ);
+    }
 
     // For BT connection status change
     auto bluetoothStatus = getBluetoothStatus();
     if (lastBluetoothStatus != bluetoothStatus) {
         modeIndicator(usbMode, bluetoothStatus);
         lastBluetoothStatus = bluetoothStatus;
+    }
+
+    // Fn key toggles gyro mouse mode (only if IMU available)
+    Keyboard_Class::KeysState status = M5Cardputer.Keyboard.keysState();
+    if (gyroAvailable && status.fn) {
+        if (!gyroMode) {
+            gyroMode = true;
+            drawGyroIndicator(true);
+        }
+    } else {
+        if (gyroMode) {
+            gyroMode = false;
+            drawGyroIndicator(false);
+        }
     }
 
     // Switch between keyboard/mouse
@@ -72,9 +109,8 @@ void loop() {
     }
 
     if (usbMode) {
-        handleUsbMode(mouseMode);
+        handleUsbMode(mouseMode, gyroMode);
     } else {
-        handleBluetoothMode(mouseMode);
+        handleBluetoothMode(mouseMode, gyroMode);
     }
-
 }

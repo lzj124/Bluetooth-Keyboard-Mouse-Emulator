@@ -1,5 +1,3 @@
-
-
 #include "bluetooth.h"
 
 BLEHIDDevice* hid;
@@ -22,7 +20,7 @@ bool getBluetoothStatus() {
     return  bluetoothIsConnected;
 }
 
-void bluetoothMouse() {
+void bluetoothMouse(bool gyroMode) {
     int16_t x = 0;         // Déplacement en X
     int16_t y = 0;         // Déplacement en Y
     uint8_t buttons = 0;   // Boutons de la souris
@@ -38,20 +36,34 @@ void bluetoothMouse() {
         buttons |= 0x02;
     }
 
-    // Vertical
-    if (M5Cardputer.Keyboard.isKeyPressed(';')) {
-        y -= 1;
-    }
-    else if (M5Cardputer.Keyboard.isKeyPressed('.')) {
-        y += 1;
-    }
+    if (gyroMode) {
+        // Gyroscope control
+        const float DEADZONE = 5.0f;
+        const float SENSITIVITY = 0.15f;
 
-    // Horizontal
-    if (M5Cardputer.Keyboard.isKeyPressed('/')) {
-        x += 1;
-    }
-    else if (M5Cardputer.Keyboard.isKeyPressed(',')) {
-        x -= 1;
+        if (abs(gyroZ) > DEADZONE) {
+            x = (int16_t)(-gyroZ * SENSITIVITY);
+        }
+        if (abs(gyroX) > DEADZONE) {
+            y = (int16_t)(-gyroX * SENSITIVITY);
+        }
+    } else {
+        // Original arrow-key control
+        // Vertical
+        if (M5Cardputer.Keyboard.isKeyPressed(';')) {
+            y -= 1;
+        }
+        else if (M5Cardputer.Keyboard.isKeyPressed('.')) {
+            y += 1;
+        }
+
+        // Horizontal
+        if (M5Cardputer.Keyboard.isKeyPressed('/')) {
+            x += 1;
+        }
+        else if (M5Cardputer.Keyboard.isKeyPressed(',')) {
+            x -= 1;
+        }
     }
 
     // Send
@@ -106,11 +118,11 @@ void sendEmptyReports() {
     keyboardInput->notify();
 }
 
-void handleBluetoothMode(bool mouseMode) {
+void handleBluetoothMode(bool mouseMode, bool gyroMode) {
     if (bluetoothIsConnected) {
         if (M5Cardputer.Keyboard.isPressed()) {
             if (mouseMode) {
-                bluetoothMouse();
+                bluetoothMouse(gyroMode);
             } else {
                 bluetoothKeyboard();
             }

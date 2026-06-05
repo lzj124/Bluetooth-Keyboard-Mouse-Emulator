@@ -71,48 +71,6 @@ void modeIndicator(bool usbMode, bool bluetoothStatus) {
     }
 }
 
-void setupDisplay() {
-    M5Cardputer.Display.setRotation(1);
-    M5Cardputer.Display.fillScreen(TFT_BLACK);
-    M5Cardputer.Display.setTextColor(TFT_BLACK);
-
-}
-
-void displayWelcomeScreen() {
-    M5Cardputer.Display.drawRect(9, 47, 220, 40, TFT_LIGHTGRAY);
-    M5Cardputer.Display.setTextColor(TFT_LIGHTGRAY);
-    M5Cardputer.Display.setCursor(18, 58);
-    M5Cardputer.Display.setTextSize(2);
-    M5Cardputer.Display.printf("M5-Keyboard-Mouse");
-
-    M5Cardputer.Display.setCursor(70, 120);
-    M5Cardputer.Display.setTextSize(1);
-    M5Cardputer.Display.printf("Version 1.1 - Geo"); 
-
-    delay(2000);
-}
-
-void displayMainScreen(bool usbMode, bool mouseMode, bool bluetoothStatus) {
-    M5Cardputer.Display.fillScreen(TFT_BLACK);
-    M5Cardputer.Display.fillRoundRect(10, 10, M5Cardputer.Display.width()-20, 20, 5, TFT_LIGHTGREY); // Around main title
-    M5Cardputer.Display.setCursor(19, 13);
-    M5Cardputer.Display.setTextSize(2);
-    M5Cardputer.Display.setTextColor(TFT_BLACK);
-    M5Cardputer.Display.print("M5-Keyboard-Mouse"); // Main title
-
-    // Go switch frame
-    M5Cardputer.Display.setTextColor(TFT_LIGHTGREY);
-    M5Cardputer.Display.drawRoundRect(123, 39, 106, 20, 5, TFT_LIGHTGREY);
-    M5Cardputer.Display.setCursor(136, 43);
-    M5Cardputer.Display.setTextSize(1.6);
-    M5Cardputer.Display.print("GO switch");
-
-    drawDeviceRect(true);
-    drawMouseIcon(165, 80);
-    drawKeyboardIcon(42, 87);
-    modeIndicator(usbMode, bluetoothStatus);
-}
-
 void displaySelectionScreen(bool mode) {
     M5Cardputer.Display.clear();
     M5Cardputer.Display.setTextSize(1.5);
@@ -146,4 +104,67 @@ void displaySelectionScreen(bool mode) {
     }
     M5Cardputer.Display.setCursor(42, 90);
     M5Cardputer.Display.printf("Bluetooth");
+}
+
+void drawGyroIndicator(bool active) {
+    int w = M5Cardputer.Display.width();
+    int x = w - 80;
+    int y = 122;
+    
+    M5Cardputer.Display.fillRect(x - 2, y, 70, 12, TFT_BLACK);  // Clear area
+    
+    if (active) {
+        M5Cardputer.Display.setTextColor(TFT_CYAN);
+        M5Cardputer.Display.setTextSize(1);
+        M5Cardputer.Display.setCursor(x, y);
+        M5Cardputer.Display.print("GYRO ON");
+    }
+    // When inactive, just cleared (no text)
+}
+
+void setupDisplay() {
+    M5Cardputer.Display.setRotation(1);
+    M5Cardputer.Display.fillScreen(TFT_BLACK);
+    M5Cardputer.Display.setTextColor(TFT_BLACK);
+}
+
+void displayWelcomeScreen() {
+    M5Cardputer.Display.drawRect(9, 47, 220, 40, TFT_LIGHTGRAY);
+    M5Cardputer.Display.setTextColor(TFT_LIGHTGRAY);
+    M5Cardputer.Display.setCursor(18, 58);
+    M5Cardputer.Display.setTextSize(2);
+    M5Cardputer.Display.printf("M5-Keyboard-Mouse");
+
+    M5Cardputer.Display.setCursor(70, 120);
+    M5Cardputer.Display.setTextSize(1);
+    M5Cardputer.Display.printf("Version 1.2 - Gyro"); 
+
+    delay(2000);
+}
+
+void displayMainScreen(bool usbMode, bool mouseMode, bool bluetoothStatus, bool gyroMode) {
+    M5Cardputer.Display.fillScreen(TFT_BLACK);
+    M5Cardputer.Display.fillRoundRect(10, 10, M5Cardputer.Display.width()-20, 20, 5, TFT_LIGHTGREY); // Around main title
+    M5Cardputer.Display.setCursor(19, 13);
+    M5Cardputer.Display.setTextSize(2);
+    M5Cardputer.Display.setTextColor(TFT_BLACK);
+    M5Cardputer.Display.print("M5-Keyboard-Mouse"); // Main title
+
+    // Go switch frame
+    M5Cardputer.Display.setTextColor(TFT_LIGHTGREY);
+    M5Cardputer.Display.drawRoundRect(123, 39, 106, 20, 5, TFT_LIGHTGREY);
+    M5Cardputer.Display.setCursor(136, 43);
+    M5Cardputer.Display.setTextSize(1.6);
+    M5Cardputer.Display.print("GO switch");
+
+    drawDeviceRect(true);
+    drawMouseIcon(165, 80);
+    drawKeyboardIcon(42, 87);
+    modeIndicator(usbMode, bluetoothStatus);
+    
+    // Gyro hint
+    M5Cardputer.Display.setTextColor(0x4208);  // dark grey
+    M5Cardputer.Display.setTextSize(1);
+    M5Cardputer.Display.setCursor(10, 122);
+    M5Cardputer.Display.print("Fn:gyro");
 }
