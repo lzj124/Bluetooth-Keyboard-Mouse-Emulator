@@ -40,12 +40,13 @@ void bluetoothMouse(bool gyroMode) {
         // Gyroscope control
         const float DEADZONE = 5.0f;
         const float SENSITIVITY = 0.15f;
+        const float ACCEL = 0.003f;  // quadratic boost for fast tilts
 
         if (abs(gyroZ) > DEADZONE) {
-            x = (int16_t)(-gyroZ * SENSITIVITY);
+            x = (int16_t)(-gyroZ * (SENSITIVITY + abs(gyroZ) * ACCEL));
         }
         if (abs(gyroX) > DEADZONE) {
-            y = (int16_t)(-gyroX * SENSITIVITY);
+            y = (int16_t)(-gyroX * (SENSITIVITY + abs(gyroX) * ACCEL));
         }
     } else {
         // Original arrow-key control
