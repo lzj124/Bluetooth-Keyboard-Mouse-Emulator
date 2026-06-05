@@ -42,16 +42,13 @@ void bluetoothMouse(bool gyroMode) {
         const float SENSITIVITY = 0.15f;
         const float ACCEL = 0.003f;  // quadratic boost for fast tilts
 
-        if (abs(gyroZ) > DEADZONE || abs(gyroY) > DEADZONE) {
-            // Blend yaw and roll based on device tilt
-            // Flat (tilt=0): pure yaw; Vertical (tilt~1.57): pure roll
-            float rawX = gyroZ * cos(tiltAngle) + gyroY * sin(tiltAngle);
-            if (abs(rawX) > DEADZONE) {
-                x = (int16_t)(-rawX * (SENSITIVITY + abs(rawX) * ACCEL));
-            }
-        }
-        if (abs(gyroX) > DEADZONE) {
-            y = (int16_t)(-gyroX * (SENSITIVITY + abs(gyroX) * ACCEL));
+        float rawX = gyroZ * cos(tiltAngle) + gyroY * sin(tiltAngle);
+        float rawY = gyroX;
+        float mag = sqrt(rawX * rawX + rawY * rawY);
+        if (mag > DEADZONE) {
+            float speed = SENSITIVITY + mag * ACCEL;
+            x = (int16_t)(-rawX * speed);
+            y = (int16_t)(-rawY * speed);
         }
     } else {
         // Original arrow-key control

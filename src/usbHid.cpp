@@ -24,15 +24,13 @@ void usbMouse(bool gyroMode) {
         const float SENSITIVITY = 0.15f;
         const float ACCEL = 0.003f;  // quadratic boost for fast tilts
 
-        if (abs(gyroZ) > DEADZONE || abs(gyroY) > DEADZONE) {
-            // Blend yaw and roll based on device tilt
-            float rawX = gyroZ * cos(tiltAngle) + gyroY * sin(tiltAngle);
-            if (abs(rawX) > DEADZONE) {
-                moveX = (int)(-rawX * (SENSITIVITY + abs(rawX) * ACCEL));
-            }
-        }
-        if (abs(gyroX) > DEADZONE) {
-            moveY = (int)(-gyroX * (SENSITIVITY + abs(gyroX) * ACCEL));
+        float rawX = gyroZ * cos(tiltAngle) + gyroY * sin(tiltAngle);
+        float rawY = gyroX;
+        float mag = sqrt(rawX * rawX + rawY * rawY);
+        if (mag > DEADZONE) {
+            float speed = SENSITIVITY + mag * ACCEL;
+            moveX = (int)(-rawX * speed);
+            moveY = (int)(-rawY * speed);
         }
 
         // Button clicks still work in gyro mode
