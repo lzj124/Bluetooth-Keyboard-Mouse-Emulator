@@ -12,7 +12,9 @@ bool lastBluetoothStatus = false;
 
 // Gyro data shared across modules
 float gyroX = 0.0f;   // pitch: tilt forward/back → mouse Y
-float gyroZ = 0.0f;   // yaw: turn left/right → mouse X
+float gyroY = 0.0f;   // roll: wrist left/right → mouse X (when device vertical)
+float gyroZ = 0.0f;   // yaw: turn left/right → mouse X (when device flat)
+float tiltAngle = 0.0f;  // device tilt from accelerometer (rad)
 
 void selectMode() {
     bool lastMode = !usbMode;
@@ -75,9 +77,12 @@ void loop() {
 
     // Read IMU data if available
     if (gyroAvailable) {
-        float gy;
+        float ax, ay, az;
         M5.Imu.update();
-        M5.Imu.getGyroData(&gyroX, &gy, &gyroZ);
+        M5.Imu.getGyroData(&gyroX, &gyroY, &gyroZ);
+        M5.Imu.getAccel(&ax, &ay, &az);
+        // Tilt: how much device is pointing upward (0=flat, ~1.57=vertical)
+        tiltAngle = atan2(ay, az);
     }
 
     // For BT connection status change

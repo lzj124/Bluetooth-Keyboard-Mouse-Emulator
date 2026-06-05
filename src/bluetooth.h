@@ -16,6 +16,8 @@ extern BLECharacteristic* keyboardInput;
 extern bool isConnected;
 
 extern float gyroX;
+extern float gyroY;
+extern float tiltAngle;
 extern float gyroZ;
 
 const uint8_t HID_REPORT_MAP[] = {

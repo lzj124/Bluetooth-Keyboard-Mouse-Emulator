@@ -6,6 +6,8 @@
 #include <M5Cardputer.h>
 
 extern float gyroX;
+extern float gyroY;
+extern float tiltAngle;
 extern float gyroZ;
 
 void usbMouse(bool gyroMode);
