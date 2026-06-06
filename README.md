@@ -1,22 +1,65 @@
 # M5 Keyboard and Mouse Emulator
 
-This project implements a USB HID and a BLE HID device using the M5Cardputer, capable of emulating both a keyboard and a mouse. The device can switch between mouse and keyboard modes, sending the appropriate input data to a connected USB/BLE device.
+M5Cardputer as a USB/BLE HID keyboard + mouse with gyro control.
 
 ## Key Features
 
-- <b>Mouse and Keyboard Emulation:</b> The device can function as either a mouse or a keyboard, sending the corresponding input data via BLE.
-- <b>Mode Switching:</b> You can toggle between mouse and keyboard modes using a designated key (Btn GO).
-- <b>Controlling mouse with the arrow keys</b>
-
+- **USB & BLE Dual Mode** — choose USB or Bluetooth at startup
+- **Fn-Hold Mouse** — hold `Fn` for mouse mode, release for keyboard (no more clunky toggle)
+- **Gyro Mouse** — tilt/rotate the Cardputer to move cursor (auto-enabled with Fn if IMU available)
+- **Scroll Wheel** — `;` scroll up, `.` scroll down (50ms cooldown, works in USB & BLE)
+- **Mouse Clicks** — `Enter` = left click, `\` = right click
+- **Battery Indicator** — progress bar + percentage on screen, green (>20%) / red (≤20%)
+- **Auto Sleep** — display turns off after 30s inactivity, wakes on any key/gyro/BtnA
+- **Dynamic Help Text** — bottom bar shows key bindings based on current mode
+- **BLE Persistence** — static MAC address so host remembers pairing across reboots
 
 ## Installation
 
-- <b>M5Burner</b> : Search into M5CARDPUTER section and simply burn it
-- <b>Old school</b> : Build or take the firmware.bin from the github release and flash it
-
+- **M5Launcher** — copy `release/firmware.bin` to SD card and flash
+- **M5Burner** — search M5CARDPUTER section and burn
+- **Build from source** — `pio run` with PlatformIO
 
 ## Usage
 
-- <b> Mode :</b> Toggle GO button (on the edge) to change between Keyboard and Mouse
-- <b>Keyboard :</b> Default Cardputer Keys. The keyboard layout depends on the configuration of the connected PC.
-- <b> Mouse : </b>Arrow LEFT/RIGHT/UP/DOWN and 'OK' and '\\' (just above 'OK' Button)</b>
+### Mode Selection
+
+At startup, press `;` / `.` to toggle USB/Bluetooth, then `Enter` to confirm.
+
+### Controls
+
+| Key | Keyboard Mode | Mouse Mode |
+|-----|:---:|:---:|
+| `Fn` (hold) | — | Activate mouse + gyro |
+| `Enter` | Return | Left click |
+| `\` | Backslash | Right click |
+| `/` | Slash | Move left |
+| `,` | Comma | Move right |
+| `;` | Semicolon | Scroll up |
+| `.` | Period | Scroll down |
+
+### Screen
+
+```
+┌──────────────────────────────────┐
+│ USB ███               ████░ 85% │
+│┌──────┐          ┌──────┐       │
+││  ⌨️   │          │  🖱️  │       │
+││      │          │      │       │
+│└──────┘          └──────┘       │
+│         [Fn]: switch            │
+└──────────────────────────────────┘
+```
+
+## Build
+
+```bash
+pio run
+# firmware at .pio/build/m5stack-stamps3/firmware.bin
+```
+
+Pre-built firmware: `release/firmware.bin`
+
+## Credits
+
+Based on [geo-tp/Bluetooth-Keyboard-Mouse-Emulator](https://github.com/geo-tp/Bluetooth-Keyboard-Mouse-Emulator)
