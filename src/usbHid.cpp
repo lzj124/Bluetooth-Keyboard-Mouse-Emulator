@@ -18,11 +18,16 @@ void usbMouse(bool gyroMode) {
     int moveY = 0;
     int wheel = 0;
 
-    // Scroll wheel: ; = up, . = down
-    if (M5Cardputer.Keyboard.isKeyPressed(';')) {
-        wheel = 1;
-    } else if (M5Cardputer.Keyboard.isKeyPressed('.')) {
-        wheel = -1;
+    // Scroll wheel: ; = up, . = down — 50ms cooldown
+    static unsigned long lastWheelTime = 0;
+    if (millis() - lastWheelTime > 50) {
+        if (M5Cardputer.Keyboard.isKeyPressed(';')) {
+            wheel = 1;
+            lastWheelTime = millis();
+        } else if (M5Cardputer.Keyboard.isKeyPressed('.')) {
+            wheel = -1;
+            lastWheelTime = millis();
+        }
     }
 
     if (gyroMode) {

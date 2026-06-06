@@ -64,11 +64,16 @@ void bluetoothMouse(bool gyroMode) {
         buttons |= 0x02;
     }
 
-    // Scroll wheel: ; = up, . = down (in any mouse mode)
-    if (M5Cardputer.Keyboard.isKeyPressed(';')) {
-        wheel = 1;
-    } else if (M5Cardputer.Keyboard.isKeyPressed('.')) {
-        wheel = -1;
+    // Scroll wheel: ; = up, . = down (in any mouse mode) — 50ms cooldown
+    static unsigned long lastWheelTime = 0;
+    if (millis() - lastWheelTime > 50) {
+        if (M5Cardputer.Keyboard.isKeyPressed(';')) {
+            wheel = 1;
+            lastWheelTime = millis();
+        } else if (M5Cardputer.Keyboard.isKeyPressed('.')) {
+            wheel = -1;
+            lastWheelTime = millis();
+        }
     }
 
     if (gyroMode) {
@@ -196,6 +201,7 @@ void initBluetooth() {
 }
 
 void deinitBluetooth() {
+    bluetoothIsConnected = false;
     BLEDevice::deinit();
     delay(1000);
 }
