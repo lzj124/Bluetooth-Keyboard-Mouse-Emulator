@@ -52,6 +52,7 @@ bool getBluetoothStatus() {
 void bluetoothMouse(bool gyroMode) {
     int16_t x = 0;
     int16_t y = 0;
+    int8_t wheel = 0;
     uint8_t buttons = 0;
 
     Keyboard_Class::KeysState status = M5Cardputer.Keyboard.keysState();
@@ -61,6 +62,18 @@ void bluetoothMouse(bool gyroMode) {
     }
     if (M5Cardputer.Keyboard.isKeyPressed('\\')) {
         buttons |= 0x02;
+    }
+
+    // Scroll wheel: ; = up, . = down (in any mouse mode) — 50ms cooldown
+    static unsigned long lastWheelTime = 0;
+    if (millis() - lastWheelTime > 50) {
+        if (M5Cardputer.Keyboard.isKeyPressed(';')) {
+            wheel = 1;
+            lastWheelTime = millis();
+        } else if (M5Cardputer.Keyboard.isKeyPressed('.')) {
+            wheel = -1;
+            lastWheelTime = millis();
+        }
     }
 
     if (gyroMode) {
@@ -74,12 +87,6 @@ void bluetoothMouse(bool gyroMode) {
             y = (int16_t)(-rawY * SENSITIVITY);
         }
     } else {
-        if (M5Cardputer.Keyboard.isKeyPressed(';')) {
-            y -= 1;
-        }
-        else if (M5Cardputer.Keyboard.isKeyPressed('.')) {
-            y += 1;
-        }
         if (M5Cardputer.Keyboard.isKeyPressed('/')) {
             x += 1;
         }
@@ -88,7 +95,7 @@ void bluetoothMouse(bool gyroMode) {
         }
     }
 
-    uint8_t report[4] = {buttons, (uint8_t)x, (uint8_t)y, 0};
+    uint8_t report[5] = {buttons, (uint8_t)x, (uint8_t)y, (uint8_t)wheel, 0};
     mouseInput->setValue(report, sizeof(report));
     mouseInput->notify();
 }
@@ -127,7 +134,7 @@ void bluetoothKeyboard() {
 }
 
 void sendEmptyReports() {
-    uint8_t emptyMouseReport[4] = {0, 0, 0, 0};
+    uint8_t emptyMouseReport[5] = {0, 0, 0, 0, 0};
     mouseInput->setValue(emptyMouseReport, sizeof(emptyMouseReport));
     mouseInput->notify();
 
@@ -194,6 +201,7 @@ void initBluetooth() {
 }
 
 void deinitBluetooth() {
+    bluetoothIsConnected = false;
     BLEDevice::deinit();
     delay(1000);
 }
