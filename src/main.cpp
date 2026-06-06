@@ -9,6 +9,10 @@ bool usbMode = true;
 bool gyroMode = false;
 bool gyroAvailable = false;
 bool lastBluetoothStatus = false;
+unsigned long lastBatteryDraw = 0;
+unsigned long lastActivity = 0;
+bool screenOn = true;
+const unsigned long SLEEP_TIMEOUT = 30000;  // 30s
 
 // Gyro data shared across modules
 float gyroX = 0.0f;
@@ -82,6 +86,28 @@ void loop() {
         tiltAngle = atan2(ay, az);
     }
 
+    // Activity detection: any key press or gyro movement = awake
+    bool anyKey = M5Cardputer.Keyboard.isPressed();
+    bool gyroActive = gyroAvailable && (abs(gyroX) > 10 || abs(gyroY) > 10 || abs(gyroZ) > 10);
+    if (anyKey || gyroActive || M5Cardputer.BtnA.isPressed()) {
+        lastActivity = millis();
+        if (!screenOn) {
+            screenOn = true;
+            M5Cardputer.Display.setBrightness(128);
+        }
+    }
+
+    // Auto sleep
+    if (screenOn && millis() - lastActivity > SLEEP_TIMEOUT) {
+        screenOn = false;
+        M5Cardputer.Display.setBrightness(0);
+    }
+
+    if (!screenOn) {
+        delay(50);
+        return;
+    }
+
     // For BT connection status change
     auto bluetoothStatus = getBluetoothStatus();
     if (lastBluetoothStatus != bluetoothStatus) {
@@ -91,23 +117,19 @@ void loop() {
 
     // Fn key toggles gyro mouse mode (only if IMU available)
     Keyboard_Class::KeysState status = M5Cardputer.Keyboard.keysState();
-    if (gyroAvailable && status.fn) {
-        if (!gyroMode) {
-            gyroMode = true;
-            drawGyroIndicator(true);
-        }
-    } else {
-        if (gyroMode) {
-            gyroMode = false;
-            drawGyroIndicator(false);
-        }
-    }
+    gyroMode = gyroAvailable && status.fn;
 
     // Switch between keyboard/mouse
     if (M5Cardputer.BtnA.isPressed()) {
         mouseMode = !mouseMode;
         drawDeviceRect(mouseMode);
         delay(200);
+    }
+
+    // Periodic battery update
+    if (millis() - lastBatteryDraw > 5000) {
+        drawBattery();
+        lastBatteryDraw = millis();
     }
 
     if (usbMode) {
