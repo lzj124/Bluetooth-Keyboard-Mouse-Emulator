@@ -101,4 +101,12 @@ public:
     void onDisconnect(BLEServer* pServer, esp_ble_gatts_cb_param_t *param) override;
 };
 
+class MySecurityCallbacks : public BLESecurityCallbacks {
+    uint32_t onPassKeyRequest() override;
+    void onPassKeyNotify(uint32_t pass_key) override;
+    bool onSecurityRequest() override;
+    bool onConfirmPIN(uint32_t pin) override;
+    void onAuthenticationComplete(esp_ble_auth_cmpl_t auth_cmpl) override;
+};
+
 #endif // BLUETOOTH_H
