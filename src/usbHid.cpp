@@ -16,6 +16,14 @@ void usbMouse(bool gyroMode) {
     mouse.begin();
     int moveX = 0;
     int moveY = 0;
+    int wheel = 0;
+
+    // Scroll wheel: ; = up, . = down
+    if (M5Cardputer.Keyboard.isKeyPressed(';')) {
+        wheel = 1;
+    } else if (M5Cardputer.Keyboard.isKeyPressed('.')) {
+        wheel = -1;
+    }
 
     if (gyroMode) {
         // Gyroscope control: tilt device to move cursor
@@ -40,7 +48,7 @@ void usbMouse(bool gyroMode) {
             mouse.release(MOUSE_BUTTON_RIGHT);
         }
 
-        mouse.move(moveX, moveY);
+        mouse.move(moveX, moveY, wheel);
         return;
     }
 
@@ -49,35 +57,21 @@ void usbMouse(bool gyroMode) {
         Keyboard_Class::KeysState status = M5Cardputer.Keyboard.keysState();
 
         if (M5Cardputer.Keyboard.isKeyPressed('/')) {
-            // droite
             moveX = 1;
         } 
         
         if (M5Cardputer.Keyboard.isKeyPressed(',')) {
-            // gauche
             moveX = -1;
-        }  
-        
-        if (M5Cardputer.Keyboard.isKeyPressed(';')) {
-            // haut
-            moveY = -1;
-        } 
-        
-        if (M5Cardputer.Keyboard.isKeyPressed('.')) {
-            // bas
-            moveY = 1;
         }
 
         // clics souris
         if (status.enter) {
-            // gauche
             mouse.press(MOUSE_BUTTON_LEFT);
         } else if (M5Cardputer.Keyboard.isKeyPressed('\\')) {
-            // droit
             mouse.press(MOUSE_BUTTON_RIGHT);
         }
         // Send
-        mouse.move(moveX, moveY);
+        mouse.move(moveX, moveY, wheel);
 
     } else {
         mouse.release(MOUSE_BUTTON_LEFT);

@@ -8,13 +8,21 @@ bool mouseMode = true;
 bool usbMode = true;
 bool gyroMode = false;
 bool gyroAvailable = false;
+bool pairingMode = false;
 bool lastBluetoothStatus = false;
+unsigned long pairingStart = 0;
+unsigned long lastBlinkToggle = 0;
+bool blinkOn = false;
+
+// Go button long-press tracking
+unsigned long goPressStart = 0;
+bool goWasPressed = false;
 
 // Gyro data shared across modules
-float gyroX = 0.0f;   // pitch: tilt forward/back → mouse Y
-float gyroY = 0.0f;   // roll: wrist left/right → mouse X (when device vertical)
-float gyroZ = 0.0f;   // yaw: turn left/right → mouse X (when device flat)
-float tiltAngle = 0.0f;  // device tilt from accelerometer (rad)
+float gyroX = 0.0f;
+float gyroY = 0.0f;
+float gyroZ = 0.0f;
+float tiltAngle = 0.0f;
 
 void selectMode() {
     bool lastMode = !usbMode;
@@ -47,7 +55,6 @@ void setup() {
     auto cfg = M5.config();
     M5Cardputer.begin(cfg, true);
     
-    // M5Cardputer.begin() already inits the IMU — just warm it up if available
     if (M5.Imu.isEnabled()) {
         gyroAvailable = true;
         float dummy;
@@ -56,7 +63,6 @@ void setup() {
             M5.Imu.getGyroData(&dummy, &dummy, &dummy);
             delay(5);
         }
-        gyroAvailable = true;
     }
     
     setupDisplay();
@@ -81,15 +87,66 @@ void loop() {
         M5.Imu.update();
         M5.Imu.getGyroData(&gyroX, &gyroY, &gyroZ);
         M5.Imu.getAccel(&ax, &ay, &az);
-        // Tilt: how much device is pointing upward (0=flat, ~1.57=vertical)
         tiltAngle = atan2(ay, az);
     }
 
-    // For BT connection status change
-    auto bluetoothStatus = getBluetoothStatus();
-    if (lastBluetoothStatus != bluetoothStatus) {
-        modeIndicator(usbMode, bluetoothStatus);
-        lastBluetoothStatus = bluetoothStatus;
+    // --- BtnA: short press = toggle key/mouse, long press (2s) = BT pairing ---
+    bool goPressed = M5Cardputer.BtnA.isPressed();
+    static bool pairingTriggered = false;
+
+    // Long-press detection
+    if (goPressed && !goWasPressed) {
+        goPressStart = millis();
+    }
+    if (goPressed && goWasPressed && millis() - goPressStart > 2000 && !pairingTriggered) {
+        if (!usbMode && !pairingMode) {
+            pairingMode = true;
+            deinitBluetooth();
+            initBluetooth();
+            pairingStart = millis();
+            lastBlinkToggle = millis();
+            blinkOn = true;
+            modeIndicator(usbMode, false, true);
+            pairingTriggered = true;
+        }
+    }
+    // Short-press on release (if not a long press)
+    if (!goPressed && goWasPressed && !pairingTriggered && !pairingMode) {
+        mouseMode = !mouseMode;
+        drawDeviceRect(mouseMode);
+    }
+    if (!goPressed) {
+        pairingTriggered = false;
+    }
+    goWasPressed = goPressed;
+
+    // Exit pairing mode on connection
+    if (pairingMode && getBluetoothStatus()) {
+        pairingMode = false;
+    }
+
+    // Blink effect during pairing
+    if (pairingMode && millis() - lastBlinkToggle > 400) {
+        blinkOn = !blinkOn;
+        lastBlinkToggle = millis();
+        if (blinkOn) {
+            modeIndicator(usbMode, false, true);   // blue
+        } else {
+            M5Cardputer.Display.drawRoundRect(10, 39, 104, 20, 5, TFT_BLACK);  // off
+        }
+    }
+    // Timeout pairing after 60s
+    if (pairingMode && millis() - pairingStart > 60000) {
+        pairingMode = false;
+    }
+
+    // For BT connection status change (non-pairing)
+    if (!pairingMode) {
+        auto bluetoothStatus = getBluetoothStatus();
+        if (lastBluetoothStatus != bluetoothStatus) {
+            modeIndicator(usbMode, bluetoothStatus);
+            lastBluetoothStatus = bluetoothStatus;
+        }
     }
 
     // Fn key toggles gyro mouse mode (only if IMU available)
@@ -104,13 +161,6 @@ void loop() {
             gyroMode = false;
             drawGyroIndicator(false);
         }
-    }
-
-    // Switch between keyboard/mouse
-    if (M5Cardputer.BtnA.isPressed()) {
-        mouseMode = !mouseMode;
-        drawDeviceRect(mouseMode);
-        delay(200);
     }
 
     if (usbMode) {

@@ -48,27 +48,36 @@ void drawKeyboardIcon(uint8_t x, uint8_t y) {
     M5Cardputer.Display.drawLine(x, y + 20, x + 40, y + 20, TFT_WHITE);  // Ligne bas
 }
 
-void modeIndicator(bool usbMode, bool bluetoothStatus) {
+void modeIndicator(bool usbMode, bool bluetoothStatus, bool pairingBlink) {
     M5Cardputer.Display.setTextSize(1.6);
     
-    if (bluetoothStatus || usbMode) {
-        // Green
-        M5Cardputer.Display.drawRoundRect(10, 39, 104, 20, 5, TFT_GREEN);
-        M5Cardputer.Display.setTextColor(TFT_GREEN);
-
-    } else {
-        // Red
-        M5Cardputer.Display.drawRoundRect(10, 39, 104, 20, 5, TFT_RED);
-        M5Cardputer.Display.setTextColor(TFT_RED);
-    }
-
+    // Choose color: connected=green, pairing=blue, disconnected=red
+    uint16_t color;
+    const char* label;
+    int cursorX;
+    
     if (usbMode) {
-        M5Cardputer.Display.setCursor(50, 43);
-        M5Cardputer.Display.print("USB");
+        color = TFT_GREEN;
+        label = "USB";
+        cursorX = 50;
+    } else if (pairingBlink) {
+        color = TFT_BLUE;
+        label = "Bluetooth";
+        cursorX = 23;
+    } else if (bluetoothStatus) {
+        color = TFT_GREEN;
+        label = "Bluetooth";
+        cursorX = 23;
     } else {
-        M5Cardputer.Display.setCursor(23, 43);
-        M5Cardputer.Display.print("Bluetooth");
+        color = TFT_RED;
+        label = "Bluetooth";
+        cursorX = 23;
     }
+    
+    M5Cardputer.Display.drawRoundRect(10, 39, 104, 20, 5, color);
+    M5Cardputer.Display.setTextColor(color);
+    M5Cardputer.Display.setCursor(cursorX, 43);
+    M5Cardputer.Display.print(label);
 }
 
 void displaySelectionScreen(bool mode) {
