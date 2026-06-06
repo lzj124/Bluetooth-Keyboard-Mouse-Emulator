@@ -106,20 +106,17 @@ void displaySelectionScreen(bool mode) {
     M5Cardputer.Display.printf("Bluetooth");
 }
 
-void drawGyroIndicator(bool active) {
+void drawBattery() {
+    int level = M5.Power.getBatteryLevel();
     int w = M5Cardputer.Display.width();
-    int x = w - 80;
-    int y = 122;
+    int x = w - 40;
+    int y = 9;
     
-    M5Cardputer.Display.fillRect(x - 2, y, 70, 12, TFT_BLACK);  // Clear area
-    
-    if (active) {
-        M5Cardputer.Display.setTextColor(TFT_CYAN);
-        M5Cardputer.Display.setTextSize(1);
-        M5Cardputer.Display.setCursor(x, y);
-        M5Cardputer.Display.print("GYRO ON");
-    }
-    // When inactive, just cleared (no text)
+    M5Cardputer.Display.fillRect(x - 2, y, 38, 10, TFT_BLACK);
+    M5Cardputer.Display.setTextColor(level > 20 ? 0x07E0 : TFT_RED);
+    M5Cardputer.Display.setTextSize(1);
+    M5Cardputer.Display.setCursor(x, y);
+    M5Cardputer.Display.printf("%d%%", level);
 }
 
 void setupDisplay() {
@@ -161,10 +158,5 @@ void displayMainScreen(bool usbMode, bool mouseMode, bool bluetoothStatus, bool 
     drawMouseIcon(165, 80);
     drawKeyboardIcon(42, 87);
     modeIndicator(usbMode, bluetoothStatus);
-    
-    // Gyro hint
-    M5Cardputer.Display.setTextColor(0x4208);  // dark grey
-    M5Cardputer.Display.setTextSize(1);
-    M5Cardputer.Display.setCursor(10, 122);
-    M5Cardputer.Display.print("Fn:gyro");
+    drawBattery();
 }
