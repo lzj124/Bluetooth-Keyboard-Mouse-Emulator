@@ -1,4 +1,3 @@
-
 #ifndef DISPLAY_H
 #define DSPLAY_H
 
@@ -7,8 +6,9 @@
 void setupDisplay();
 void displayWelcomeScreen();
 void displaySelectionScreen(bool mouseMode);
-void displayMainScreen(bool usbMode, bool mouseMode, bool bluetoothStatus);
+void displayMainScreen(bool usbMode, bool mouseMode, bool bluetoothStatus, bool gyroMode);
 void modeIndicator(bool usbMode, bool bluetoothStatus);
 void drawDeviceRect(bool reverse);
+void drawGyroIndicator(bool active);
 
 #endif

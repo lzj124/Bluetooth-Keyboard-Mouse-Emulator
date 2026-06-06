@@ -5,8 +5,13 @@
 #include "USBHIDKeyboard.h"
 #include <M5Cardputer.h>
 
-void usbMouse();
+extern float gyroX;
+extern float gyroY;
+extern float tiltAngle;
+extern float gyroZ;
+
+void usbMouse(bool gyroMode);
 void usbKeyboard();
-void handleUsbMode(bool mouseMode);
+void handleUsbMode(bool mouseMode, bool gyroMode);
 
 #endif

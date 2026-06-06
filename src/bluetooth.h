@@ -15,6 +15,11 @@ extern BLECharacteristic* mouseInput;
 extern BLECharacteristic* keyboardInput;
 extern bool isConnected;
 
+extern float gyroX;
+extern float gyroY;
+extern float tiltAngle;
+extern float gyroZ;
+
 const uint8_t HID_REPORT_MAP[] = {
     // Mouse report
     0x05, 0x01,        // Usage Page (Generic Desktop)
@@ -85,15 +90,23 @@ void initBluetooth();
 void deinitBluetooth();
 bool getBluetoothStatus();
 
-void bluetoothMouse();
+void bluetoothMouse(bool gyroMode);
 void bluetoothKeyboard();
 void sendEmptyReports();
-void handleBluetoothMode(bool mouseMode);
+void handleBluetoothMode(bool mouseMode, bool gyroMode);
 
 class MyBLEServerCallbacks : public BLEServerCallbacks {
 public:
     void onConnect(BLEServer* pServer) override;
     void onDisconnect(BLEServer* pServer, esp_ble_gatts_cb_param_t *param) override;
+};
+
+class MySecurityCallbacks : public BLESecurityCallbacks {
+    uint32_t onPassKeyRequest() override;
+    void onPassKeyNotify(uint32_t pass_key) override;
+    bool onSecurityRequest() override;
+    bool onConfirmPIN(uint32_t pin) override;
+    void onAuthenticationComplete(esp_ble_auth_cmpl_t auth_cmpl) override;
 };
 
 #endif // BLUETOOTH_H
