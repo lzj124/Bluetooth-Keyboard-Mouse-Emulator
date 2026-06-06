@@ -10,5 +10,6 @@ void displayMainScreen(bool usbMode, bool mouseMode, bool bluetoothStatus, bool 
 void modeIndicator(bool usbMode, bool bluetoothStatus);
 void drawDeviceRect(bool reverse);
 void drawBattery();
+void drawHelpText(bool mouseMode);
 
 #endif

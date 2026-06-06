@@ -4,12 +4,12 @@
 void drawDeviceRect(bool reverse) {
     if (reverse) {
         // GREEN WHITE
-        M5Cardputer.Display.drawRoundRect(10, 50, M5Cardputer.Display.width() / 2 - 15, M5Cardputer.Display.height() - 60, 3, TFT_WHITE); // Keyboard mode rectangle
-        M5Cardputer.Display.drawRoundRect(M5Cardputer.Display.width() / 2 + 5, 50, M5Cardputer.Display.width() / 2 - 15, M5Cardputer.Display.height() - 60,  3, TFT_GREEN);  // Mouse mode rectangle
+        M5Cardputer.Display.drawRoundRect(10, 25, M5Cardputer.Display.width() / 2 - 15, M5Cardputer.Display.height() - 50, 3, TFT_WHITE); // Keyboard mode rectangle
+        M5Cardputer.Display.drawRoundRect(M5Cardputer.Display.width() / 2 + 5, 25, M5Cardputer.Display.width() / 2 - 15, M5Cardputer.Display.height() - 50,  3, TFT_GREEN);  // Mouse mode rectangle
     } else {
         // WHITE GREEN
-        M5Cardputer.Display.drawRoundRect(10, 50, M5Cardputer.Display.width() / 2 - 15, M5Cardputer.Display.height() - 60, 3, TFT_GREEN);
-        M5Cardputer.Display.drawRoundRect(M5Cardputer.Display.width() / 2 + 5, 50, M5Cardputer.Display.width() / 2 - 15, M5Cardputer.Display.height() - 60,  3, TFT_WHITE); 
+        M5Cardputer.Display.drawRoundRect(10, 25, M5Cardputer.Display.width() / 2 - 15, M5Cardputer.Display.height() - 50, 3, TFT_GREEN);
+        M5Cardputer.Display.drawRoundRect(M5Cardputer.Display.width() / 2 + 5, 25, M5Cardputer.Display.width() / 2 - 15, M5Cardputer.Display.height() - 50,  3, TFT_WHITE); 
     }
 }
 
@@ -53,20 +53,20 @@ void modeIndicator(bool usbMode, bool bluetoothStatus) {
     
     if (bluetoothStatus || usbMode) {
         // Green
-        M5Cardputer.Display.drawRoundRect(10, 20, 104, 20, 5, TFT_GREEN);
+        M5Cardputer.Display.drawRoundRect(10, 4, 104, 18, 5, TFT_GREEN);
         M5Cardputer.Display.setTextColor(TFT_GREEN);
 
     } else {
         // Red
-        M5Cardputer.Display.drawRoundRect(10, 20, 104, 20, 5, TFT_RED);
+        M5Cardputer.Display.drawRoundRect(10, 4, 104, 18, 5, TFT_RED);
         M5Cardputer.Display.setTextColor(TFT_RED);
     }
 
     if (usbMode) {
-        M5Cardputer.Display.setCursor(50, 24);
+        M5Cardputer.Display.setCursor(50, 7);
         M5Cardputer.Display.print("USB");
     } else {
-        M5Cardputer.Display.setCursor(23, 24);
+        M5Cardputer.Display.setCursor(23, 7);
         M5Cardputer.Display.print("Bluetooth");
     }
 }
@@ -109,13 +109,23 @@ void displaySelectionScreen(bool mode) {
 void drawBattery() {
     int level = M5.Power.getBatteryLevel();
     int w = M5Cardputer.Display.width();
-    int x = w - 40;
-    int y = 9;
-    
-    M5Cardputer.Display.fillRect(x - 2, y, 38, 10, TFT_BLACK);
+    int barW = 20, barH = 7;
+    int barX = w - 66, barY = 8;
+    int txX = w - 40, txY = 7;
+
+    // Battery bar
+    M5Cardputer.Display.drawRect(barX, barY, barW, barH, 0x4208);
+    int fillW = (level * (barW - 2)) / 100;
+    if (fillW > 0) {
+        uint16_t fillColor = level > 20 ? 0x07E0 : TFT_RED;
+        M5Cardputer.Display.fillRect(barX + 1, barY + 1, fillW, barH - 2, fillColor);
+    }
+
+    // Clear text area and draw
+    M5Cardputer.Display.fillRect(txX - 2, txY, 38, 10, TFT_BLACK);
     M5Cardputer.Display.setTextColor(level > 20 ? 0x07E0 : TFT_RED);
     M5Cardputer.Display.setTextSize(1);
-    M5Cardputer.Display.setCursor(x, y);
+    M5Cardputer.Display.setCursor(txX, txY);
     M5Cardputer.Display.printf("%d%%", level);
 }
 
@@ -139,19 +149,30 @@ void displayWelcomeScreen() {
     delay(2000);
 }
 
+void drawHelpText(bool mouseMode) {
+    // Clear bottom area
+    M5Cardputer.Display.fillRect(0, 114, M5Cardputer.Display.width(), 21, TFT_BLACK);
+    M5Cardputer.Display.setTextColor(0x4208);  // dark grey
+    M5Cardputer.Display.setTextSize(1);
+
+    if (mouseMode) {
+        M5Cardputer.Display.setCursor(8, 116);
+        M5Cardputer.Display.print("[Enter]: LMB  [\\]: RMB");
+        M5Cardputer.Display.setCursor(8, 125);
+        M5Cardputer.Display.print("[;]/[.]: scroll up/down");
+    } else {
+        M5Cardputer.Display.setCursor(8, 120);
+        M5Cardputer.Display.print("[Fn]: switch");
+    }
+}
+
 void displayMainScreen(bool usbMode, bool mouseMode, bool bluetoothStatus, bool gyroMode) {
     M5Cardputer.Display.fillScreen(TFT_BLACK);
 
-    // Go switch frame
-    M5Cardputer.Display.setTextColor(TFT_LIGHTGREY);
-    M5Cardputer.Display.drawRoundRect(123, 20, 106, 20, 5, TFT_LIGHTGREY);
-    M5Cardputer.Display.setCursor(136, 24);
-    M5Cardputer.Display.setTextSize(1.6);
-    M5Cardputer.Display.print("GO switch");
-
-    drawDeviceRect(true);
-    drawMouseIcon(165, 60);
-    drawKeyboardIcon(42, 67);
+    drawDeviceRect(mouseMode);
+    drawMouseIcon(165, 50);
+    drawKeyboardIcon(42, 57);
     modeIndicator(usbMode, bluetoothStatus);
     drawBattery();
+    drawHelpText(mouseMode);
 }

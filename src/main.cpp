@@ -4,7 +4,7 @@
 #include "usbHid.h"
 #include <USB.h>
 
-bool mouseMode = true;
+bool mouseMode = false;  // default keyboard, Fn toggles mouse
 bool usbMode = true;
 bool gyroMode = false;
 bool gyroAvailable = false;
@@ -115,16 +115,21 @@ void loop() {
         lastBluetoothStatus = bluetoothStatus;
     }
 
-    // Fn key toggles gyro mouse mode (only if IMU available)
+    // Fn key: hold = mouse mode, release = keyboard mode; also enables gyro if IMU available
     Keyboard_Class::KeysState status = M5Cardputer.Keyboard.keysState();
-    gyroMode = gyroAvailable && status.fn;
-
-    // Switch between keyboard/mouse
-    if (M5Cardputer.BtnA.isPressed()) {
-        mouseMode = !mouseMode;
+    bool fnHeld = status.fn;
+    
+    if (fnHeld && !mouseMode) {
+        mouseMode = true;
         drawDeviceRect(mouseMode);
-        delay(200);
+        drawHelpText(mouseMode);
+    } else if (!fnHeld && mouseMode) {
+        mouseMode = false;
+        drawDeviceRect(mouseMode);
+        drawHelpText(mouseMode);
     }
+    
+    gyroMode = gyroAvailable && fnHeld;
 
     // Periodic battery update
     if (millis() - lastBatteryDraw > 5000) {
