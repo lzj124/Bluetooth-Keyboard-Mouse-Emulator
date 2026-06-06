@@ -66,15 +66,12 @@ void bluetoothMouse(bool gyroMode) {
     if (gyroMode) {
         const float DEADZONE = 5.0f;
         const float SENSITIVITY = 0.15f;
-        const float ACCEL = 0.003f;
 
         float rawX = gyroZ * cos(tiltAngle) + gyroY * sin(tiltAngle);
         float rawY = gyroX;
-        float mag = sqrt(rawX * rawX + rawY * rawY);
-        if (mag > DEADZONE) {
-            float speed = SENSITIVITY + mag * ACCEL;
-            x = (int16_t)(-rawX * speed);
-            y = (int16_t)(-rawY * speed);
+        if (abs(rawX) > DEADZONE || abs(rawY) > DEADZONE) {
+            x = (int16_t)(-rawX * SENSITIVITY);
+            y = (int16_t)(-rawY * SENSITIVITY);
         }
     } else {
         if (M5Cardputer.Keyboard.isKeyPressed(';')) {
