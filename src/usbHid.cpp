@@ -19,18 +19,14 @@ void usbMouse(bool gyroMode) {
 
     if (gyroMode) {
         // Gyroscope control: tilt device to move cursor
-        // Deadzone: ignore small movements
         const float DEADZONE = 5.0f;
         const float SENSITIVITY = 0.15f;
-        const float ACCEL = 0.003f;  // quadratic boost for fast tilts
 
         float rawX = gyroZ * cos(tiltAngle) + gyroY * sin(tiltAngle);
         float rawY = gyroX;
-        float mag = sqrt(rawX * rawX + rawY * rawY);
-        if (mag > DEADZONE) {
-            float speed = SENSITIVITY + mag * ACCEL;
-            moveX = (int)(-rawX * speed);
-            moveY = (int)(-rawY * speed);
+        if (abs(rawX) > DEADZONE || abs(rawY) > DEADZONE) {
+            moveX = (int)(-rawX * SENSITIVITY);
+            moveY = (int)(-rawY * SENSITIVITY);
         }
 
         // Button clicks still work in gyro mode
