@@ -185,6 +185,16 @@ void initBluetooth() {
     hid->reportMap((uint8_t*)HID_REPORT_MAP, sizeof(HID_REPORT_MAP));
     hid->startServices();
 
+    // Battery Service — required by Windows for BLE HID
+    BLEService *pBatt = pServer->createService(BLEUUID((uint16_t)0x180F));
+    BLECharacteristic *pBattLevel = pBatt->createCharacteristic(
+        BLEUUID((uint16_t)0x2A19),
+        BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY
+    );
+    uint8_t battVal = 100;
+    pBattLevel->setValue(&battVal, 1);
+    pBatt->start();
+
     BLEAdvertising *pAdvertising = pServer->getAdvertising();
     pAdvertising->setAppearance(HID_MOUSE);
     pAdvertising->addServiceUUID(hid->hidService()->getUUID());
