@@ -4,6 +4,7 @@
 BLEHIDDevice* hid;
 BLECharacteristic* mouseInput;
 BLECharacteristic* keyboardInput;
+BLECharacteristic* pBattLevel = nullptr;
 bool bluetoothIsConnected = false;
 
 void MyBLEServerCallbacks::onConnect(BLEServer* pServer) {
@@ -187,16 +188,16 @@ void initBluetooth() {
 
     // Battery Service — required by Windows for BLE HID
     BLEService *pBatt = pServer->createService(BLEUUID((uint16_t)0x180F));
-    BLECharacteristic *pBattLevel = pBatt->createCharacteristic(
+    pBattLevel = pBatt->createCharacteristic(
         BLEUUID((uint16_t)0x2A19),
         BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY
     );
-    uint8_t battVal = 100;
+    uint8_t battVal = M5.Power.getBatteryLevel();
     pBattLevel->setValue(&battVal, 1);
     pBatt->start();
 
     BLEAdvertising *pAdvertising = pServer->getAdvertising();
-    pAdvertising->setAppearance(HID_MOUSE);
+    pAdvertising->setAppearance(0x03C0);  // Generic HID (keyboard+mouse combo)
     pAdvertising->addServiceUUID(hid->hidService()->getUUID());
     pAdvertising->start();
 

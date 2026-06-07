@@ -13,6 +13,7 @@
 extern BLEHIDDevice* hid;
 extern BLECharacteristic* mouseInput;
 extern BLECharacteristic* keyboardInput;
+extern BLECharacteristic* pBattLevel;
 extern bool isConnected;
 
 extern float gyroX;

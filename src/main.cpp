@@ -135,6 +135,12 @@ void loop() {
     if (millis() - lastBatteryDraw > 5000) {
         drawBattery();
         lastBatteryDraw = millis();
+        // Sync battery level to BLE
+        if (!usbMode && pBattLevel) {
+            uint8_t batt = M5.Power.getBatteryLevel();
+            pBattLevel->setValue(&batt, 1);
+            pBattLevel->notify();
+        }
     }
 
     if (usbMode) {
