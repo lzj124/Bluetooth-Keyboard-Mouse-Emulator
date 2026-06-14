@@ -105,22 +105,24 @@ void drawBattery() {
 
 void drawHelpText(bool mouseMode, bool toggleMode) {
     M5Cardputer.Display.fillRect(0, 114, M5Cardputer.Display.width(), 21, TFT_BLACK);
-    M5Cardputer.Display.setTextColor(0x4208);
+    M5Cardputer.Display.setTextColor(0x39E7);
     M5Cardputer.Display.setTextSize(1);
 
     if (mouseMode) {
         M5Cardputer.Display.setCursor(8, 116);
-        M5Cardputer.Display.print("[Enter]: LMB  [\\]: RMB");
+        M5Cardputer.Display.print("[Enter]: LMB  [\\\\]: RMB [Go]:Settings");
         M5Cardputer.Display.setCursor(8, 125);
         M5Cardputer.Display.print("[;]/[.]: scroll up/down");
     } else {
+        M5Cardputer.Display.setCursor(8, 116);
         if (toggleMode) {
-            M5Cardputer.Display.setCursor(8, 120);
             M5Cardputer.Display.print("[Fn]: toggle mouse");
         } else {
-            M5Cardputer.Display.setCursor(8, 120);
             M5Cardputer.Display.print("[Fn]: hold= mouse");
         }
+        M5Cardputer.Display.setCursor(120, 116);
+        M5Cardputer.Display.setTextColor(0x4208);
+        M5Cardputer.Display.print(" [Go]:Settings");
     }
 }
 
@@ -137,77 +139,72 @@ void displayMainScreen(bool usbMode, bool mouseMode, bool bluetoothStatus, bool 
 
 // ── Settings page ──────────────────────────────────────────
 
-static const char* settingNames[SETTING_COUNT] = {
-    "Sensitivity",
-    "Toggle Mode",
-    "USB Mode"
-};
-
 void displaySettingsScreen(int selected, int sensitivity, bool toggleMode, bool usbMode) {
     M5Cardputer.Display.fillScreen(TFT_BLACK);
 
     // Title
     M5Cardputer.Display.setTextColor(TFT_LIGHTGRAY);
-    M5Cardputer.Display.setTextSize(1.5);
-    M5Cardputer.Display.setCursor(55, 5);
-    M5Cardputer.Display.print("Settings");
-    M5Cardputer.Display.drawLine(10, 22, 230, 22, 0x4208);
+    M5Cardputer.Display.setTextSize(1.2);
+    M5Cardputer.Display.setCursor(60, 2);
+    M5Cardputer.Display.print("== Settings ==");
+    M5Cardputer.Display.drawLine(5, 17, 235, 17, 0x4208);
+
+    static const char* names[SETTING_COUNT] = {"Sensitivity", "Switch", "Mode"};
+    int ys[SETTING_COUNT] = {24, 58, 92};
 
     for (int i = 0; i < SETTING_COUNT; i++) {
-        int y = 30 + i * 35;
+        int y = ys[i];
+        bool sel = (i == selected);
 
-        // Selection highlight
-        if (i == selected) {
-            M5Cardputer.Display.drawRoundRect(12, y - 2, 216, 32, 4, TFT_GREEN);
+        // Highlight bg
+        if (sel) {
+            M5Cardputer.Display.fillRoundRect(5, y - 2, 230, 30, 3, 0x1082);
+            M5Cardputer.Display.drawRoundRect(5, y - 2, 230, 30, 3, TFT_GREEN);
         }
 
         // Name
-        M5Cardputer.Display.setTextColor(i == selected ? TFT_GREEN : 0x8410);
+        M5Cardputer.Display.setTextColor(sel ? TFT_GREEN : 0x8410);
         M5Cardputer.Display.setTextSize(1.2);
-        M5Cardputer.Display.setCursor(20, y + 3);
-        M5Cardputer.Display.print(settingNames[i]);
+        M5Cardputer.Display.setCursor(10, y + 2);
+        M5Cardputer.Display.print(names[i]);
 
-        // Value area
-        M5Cardputer.Display.setTextSize(1.5);
-        M5Cardputer.Display.setTextColor(TFT_LIGHTGRAY);
+        // Value
+        M5Cardputer.Display.setTextSize(1.2);
 
         if (i == SETTING_SENSITIVITY) {
-            // Sensitivity: [<] ████████ [>]  N
-            M5Cardputer.Display.setCursor(110, y + 1);
-            M5Cardputer.Display.print("[<]");
-            // Bar
-            int barX = 145, barY = y + 6, barW = 60, barH = 10;
-            M5Cardputer.Display.drawRect(barX, barY, barW, barH, TFT_LIGHTGRAY);
-            int fill = (sensitivity * barW) / 10;
-            if (fill > 0) {
-                M5Cardputer.Display.fillRect(barX + 1, barY + 1, fill - 1, barH - 2, TFT_GREEN);
-            }
-            M5Cardputer.Display.print("[>]");
-            M5Cardputer.Display.setCursor(210, y + 4);
+            // [<] bar N [>]
+            M5Cardputer.Display.setTextColor(sel ? TFT_GREEN : 0x8410);
+            M5Cardputer.Display.setCursor(110, y + 2);
+            M5Cardputer.Display.print("<");
+            int barW = map(sensitivity, 1, 10, 0, 55);
+            M5Cardputer.Display.fillRect(126, y + 6, barW, 7, TFT_GREEN);
+            M5Cardputer.Display.drawRect(126, y + 6, 55, 7, TFT_LIGHTGRAY);
+            M5Cardputer.Display.setTextColor(TFT_LIGHTGRAY);
+            M5Cardputer.Display.setCursor(186, y + 2);
+            M5Cardputer.Display.print(">");
             M5Cardputer.Display.setTextSize(1);
+            M5Cardputer.Display.setCursor(205, y + 2);
             M5Cardputer.Display.print(sensitivity);
-        } else if (i == SETTING_TOGGLE_MODE) {
-            M5Cardputer.Display.setTextSize(1.5);
-            M5Cardputer.Display.setTextColor(toggleMode ? TFT_GREEN : 0x8410);
-            M5Cardputer.Display.setCursor(110, y + 1);
-            M5Cardputer.Display.print("[<] Press [>]");
-            M5Cardputer.Display.setTextColor(!toggleMode ? TFT_GREEN : 0x8410);
-            M5Cardputer.Display.setCursor(110, y + 18);
-            M5Cardputer.Display.print("[<] Hold  [>]");
-        } else if (i == SETTING_USB_MODE) {
-            M5Cardputer.Display.setTextSize(1.5);
-            M5Cardputer.Display.setTextColor(usbMode ? TFT_GREEN : 0x8410);
-            M5Cardputer.Display.setCursor(110, y + 1);
-            M5Cardputer.Display.print("[<] USB      [>]");
-            M5Cardputer.Display.setTextColor(!usbMode ? TFT_GREEN : 0x8410);
-            M5Cardputer.Display.setCursor(110, y + 18);
-            M5Cardputer.Display.print("[<] Bluetooth[>]");
+            M5Cardputer.Display.print("/10");
+        } else {
+            // Toggle: two options
+            bool optA = (i == SETTING_TOGGLE_MODE) ? toggleMode : usbMode;
+            const char* labelA = (i == SETTING_TOGGLE_MODE) ? "Toggle" : "USB";
+            const char* labelB = (i == SETTING_TOGGLE_MODE) ? "Hold"  : "Bluetooth";
+
+            M5Cardputer.Display.setTextColor(optA ? TFT_GREEN : 0x8410);
+            M5Cardputer.Display.setCursor(110, y + 2);
+            M5Cardputer.Display.print(labelA);
+            M5Cardputer.Display.setTextColor(TFT_LIGHTGRAY);
+            M5Cardputer.Display.print(" / ");
+            M5Cardputer.Display.setTextColor(!optA ? TFT_GREEN : 0x8410);
+            M5Cardputer.Display.print(labelB);
         }
     }
 
     // Footer
-    M5Cardputer.Display.setTextColor(0x4208);
+    M5Cardputer.Display.setTextColor(0x39E7);
     M5Cardputer.Display.setTextSize(1);
-    M5Cardputer.Display.setCursor(15, 128);
-    M5Cardputer.Display.print("[;]/[.]: select  [,]/[/]: change  [Go]: back");
+    M5Cardputer.Display.setCursor(4, 126);
+    M5Cardputer.Display.print("Go:back");
 }

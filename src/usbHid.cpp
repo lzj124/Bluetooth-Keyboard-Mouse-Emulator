@@ -13,7 +13,8 @@ void handleUsbMode(bool mouseMode, bool gyroMode) {
 }
 
 void usbMouse(bool gyroMode) {
-    mouse.begin();
+    static bool mouseInited = false;
+    if (!mouseInited) { mouse.begin(); mouseInited = true; }
     int moveX = 0;
     int moveY = 0;
     int wheel = 0;
@@ -32,8 +33,8 @@ void usbMouse(bool gyroMode) {
 
     if (gyroMode) {
         // Gyroscope control: tilt device to move cursor
-        const float DEADZONE = 5.0f;
-        float sens = mouseSensitivity * 0.03f;
+        const float DEADZONE = 1.0f;
+        float sens = mouseSensitivity * 0.05f;
 
         float rawX = gyroZ * cos(tiltAngle) + gyroY * sin(tiltAngle);
         float rawY = gyroX;

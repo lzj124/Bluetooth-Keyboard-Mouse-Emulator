@@ -77,8 +77,8 @@ void bluetoothMouse(bool gyroMode) {
     }
 
     if (gyroMode) {
-        const float DEADZONE = 5.0f;
-        float sens = mouseSensitivity * 0.03f;  // 0.03 ~ 0.30
+        const float DEADZONE = 1.0f;
+        float sens = mouseSensitivity * 0.05f;
 
         float rawX = gyroZ * cos(tiltAngle) + gyroY * sin(tiltAngle);
         float rawY = gyroX;
@@ -146,12 +146,10 @@ void sendEmptyReports() {
 
 void handleBluetoothMode(bool mouseMode, bool gyroMode) {
     if (bluetoothIsConnected) {
-        if (M5Cardputer.Keyboard.isPressed()) {
-            if (mouseMode) {
-                bluetoothMouse(gyroMode);
-            } else {
-                bluetoothKeyboard();
-            }
+        if (mouseMode) {
+            bluetoothMouse(gyroMode);
+        } else if (M5Cardputer.Keyboard.isPressed()) {
+            bluetoothKeyboard();
         } else {
             sendEmptyReports();
         }
@@ -204,5 +202,5 @@ void initBluetooth() {
 void deinitBluetooth() {
     bluetoothIsConnected = false;
     BLEDevice::deinit();
-    delay(1000);
+    delay(100);
 }

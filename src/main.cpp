@@ -54,11 +54,16 @@ void settingsPage() {
     while (true) {
         M5Cardputer.update();
 
+        // Go button exits (check before keyboard block)
+        if (M5Cardputer.BtnA.wasPressed()) {
+            break;
+        }
+
         if (M5Cardputer.Keyboard.isChange() && M5Cardputer.Keyboard.isPressed()) {
             Keyboard_Class::KeysState ks = M5Cardputer.Keyboard.keysState();
 
-            // Exit: Go or Esc
-            if (ks.enter || M5Cardputer.Keyboard.isKeyPressed(0x1B)) {
+            // Esc also exits
+            if (M5Cardputer.Keyboard.isKeyPressed(0x1B)) {
                 break;
             }
 
@@ -151,7 +156,7 @@ void loop() {
             M5Cardputer.Display.setBrightness(128);
         }
     }
-    if (screenOn && millis() - lastActivity > SLEEP_TIMEOUT) {
+    if (screenOn && millis() - lastActivity > SLEEP_TIMEOUT && mouseMode == false) {
         screenOn = false;
         M5Cardputer.Display.setBrightness(0);
     }
@@ -161,30 +166,25 @@ void loop() {
     }
 
     // ── Go button → Settings ──
-    static bool goWasDown = false;
-    bool goDown = M5Cardputer.BtnA.isPressed();
-    if (goDown && !goWasDown) {
-        // De-init BT if active (USB stays on)
-        if (!usbMode) {
-            deinitBluetooth();
-            delay(100);
-        }
+    if (M5Cardputer.BtnA.wasPressed()) {
+        bool oldUsbMode = usbMode;
 
         settingsPage();
 
-        // Re-init based on new usbMode
-        if (usbMode) {
-            // USB already running from init
-        } else {
-            initBluetooth();
+        // Handle mode switch if changed
+        if (usbMode != oldUsbMode) {
+            if (usbMode) {
+                deinitBluetooth();
+                USB.begin();
+            } else {
+                initBluetooth();
+            }
         }
         displayMainScreen(usbMode, mouseMode, getBluetoothStatus(), gyroAvailable && gyroMode);
         lastBluetoothStatus = getBluetoothStatus();
-        delay(200);
-        goWasDown = goDown;
+        delay(50);
         return;
     }
-    goWasDown = goDown;
 
     // BT connection status
     auto bluetoothStatus = getBluetoothStatus();
@@ -219,7 +219,7 @@ void loop() {
         }
     }
 
-    gyroMode = gyroAvailable && fnHeld;
+    gyroMode = gyroAvailable && (fnHeld || (toggleMode && mouseMode));
 
     // Battery
     if (millis() - lastBatteryDraw > 5000) {
