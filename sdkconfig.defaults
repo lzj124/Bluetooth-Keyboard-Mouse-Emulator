@@ -1,0 +1,3 @@
+# Force GATT Service Changed Indication on reconnection
+# Fixes Windows caching stale GATT handles after ESP32 reboot
+CONFIG_BT_GATTS_SEND_SERVICE_CHANGE_AUTO=y

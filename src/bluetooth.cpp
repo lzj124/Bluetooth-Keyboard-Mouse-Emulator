@@ -1,5 +1,8 @@
 #include "bluetooth.h"
 #include "esp_gap_ble_api.h"
+#include <Preferences.h>
+
+#define BLE_BOND_VERSION 1  // bump to force bond clear on next boot
 
 BLEHIDDevice* hid;
 BLECharacteristic* mouseInput;
@@ -160,6 +163,30 @@ void handleBluetoothMode(bool mouseMode, bool gyroMode) {
 
 void initBluetooth() {
     BLEDevice::init("M5-Keyboard-Mouse");
+
+    // Only clear bond keys when firmware version changes (BLE_BOND_VERSION bump).
+    // Normal reboots keep bonds intact so the host can reconnect without re-pairing.
+    Preferences prefs;
+    prefs.begin("ble", false);
+    int storedVer = prefs.getInt("bond_ver", 0);
+    if (storedVer != BLE_BOND_VERSION) {
+        int numBond = esp_ble_get_bond_device_num();
+        if (numBond > 0) {
+            esp_ble_bond_dev_t* bonds = (esp_ble_bond_dev_t*)malloc(
+                numBond * sizeof(esp_ble_bond_dev_t));
+            if (bonds) {
+                esp_ble_get_bond_device_list(&numBond, bonds);
+                for (int i = 0; i < numBond; i++) {
+                    esp_ble_remove_bond_device(bonds[i].bd_addr);
+                }
+                free(bonds);
+            }
+        }
+        prefs.putInt("bond_ver", BLE_BOND_VERSION);
+        Serial.printf("[BLE] Bond version %d→%d, cleared %d bond(s)\n",
+                      storedVer, BLE_BOND_VERSION, numBond);
+    }
+    prefs.end();
 
     // Static BLE address from device MAC — host recognizes us across reboots
     uint8_t mac[6];
