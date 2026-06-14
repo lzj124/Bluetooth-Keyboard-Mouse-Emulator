@@ -21,6 +21,8 @@ extern float gyroY;
 extern float tiltAngle;
 extern float gyroZ;
 
+extern int mouseSensitivity;
+
 const uint8_t HID_REPORT_MAP[] = {
     // Mouse report
     0x05, 0x01,        // Usage Page (Generic Desktop)
