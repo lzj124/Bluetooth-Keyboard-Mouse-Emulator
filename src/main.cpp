@@ -3,54 +3,108 @@
 #include "display.h"
 #include "usbHid.h"
 #include <USB.h>
+#include <Preferences.h>
 
-bool mouseMode = false;  // default keyboard, Fn toggles mouse
-bool usbMode = true;
+// ── Persistent settings (stored in NVS "settings") ──
+int   mouseSensitivity = 5;    // 1-10
+bool  toggleMode = false;      // false=hold-Fn, true=press-Fn-toggle
+bool  usbMode = true;
+
+// ── Runtime state ──
+bool mouseMode = false;
 bool gyroMode = false;
 bool gyroAvailable = false;
 bool lastBluetoothStatus = false;
 unsigned long lastBatteryDraw = 0;
 unsigned long lastActivity = 0;
 bool screenOn = true;
-const unsigned long SLEEP_TIMEOUT = 30000;  // 30s
+const unsigned long SLEEP_TIMEOUT = 30000;
 
-// Gyro data shared across modules
-float gyroX = 0.0f;
-float gyroY = 0.0f;
-float gyroZ = 0.0f;
+// Gyro data
+float gyroX = 0.0f, gyroY = 0.0f, gyroZ = 0.0f;
 float tiltAngle = 0.0f;
 
-void selectMode() {
-    bool lastMode = !usbMode;
+// ── Settings helpers ──
+void loadSettings() {
+    Preferences p;
+    p.begin("settings", true);
+    mouseSensitivity = p.getInt("sens", 5);
+    toggleMode       = p.getBool("tgl", false);
+    usbMode          = p.getBool("usb", true);
+    p.end();
+    if (mouseSensitivity < 1)  mouseSensitivity = 1;
+    if (mouseSensitivity > 10) mouseSensitivity = 10;
+}
+
+void saveSettings() {
+    Preferences p;
+    p.begin("settings", false);
+    p.putInt("sens", mouseSensitivity);
+    p.putBool("tgl", toggleMode);
+    p.putBool("usb", usbMode);
+    p.end();
+}
+
+// ── Settings page ──
+void settingsPage() {
+    int sel = 0;
+    bool dirty = false;
+    displaySettingsScreen(sel, mouseSensitivity, toggleMode, usbMode);
+
     while (true) {
         M5Cardputer.update();
 
-        if (lastMode != usbMode) {
-            displaySelectionScreen(usbMode);
-            lastMode = usbMode;
+        if (M5Cardputer.Keyboard.isChange() && M5Cardputer.Keyboard.isPressed()) {
+            Keyboard_Class::KeysState ks = M5Cardputer.Keyboard.keysState();
+
+            // Exit: Go or Esc
+            if (ks.enter || M5Cardputer.Keyboard.isKeyPressed(0x1B)) {
+                break;
+            }
+
+            // Navigate: ; up, . down
+            if (M5Cardputer.Keyboard.isKeyPressed(';')) {
+                sel = (sel - 1 + SETTING_COUNT) % SETTING_COUNT;
+                dirty = true;
+            }
+            if (M5Cardputer.Keyboard.isKeyPressed('.')) {
+                sel = (sel + 1) % SETTING_COUNT;
+                dirty = true;
+            }
+
+            // Adjust: , left, / right
+            bool left  = M5Cardputer.Keyboard.isKeyPressed(',');
+            bool right = M5Cardputer.Keyboard.isKeyPressed('/');
+            if (left || right) {
+                if (sel == SETTING_SENSITIVITY) {
+                    if (left)  mouseSensitivity = max(1,  mouseSensitivity - 1);
+                    if (right) mouseSensitivity = min(10, mouseSensitivity + 1);
+                } else if (sel == SETTING_TOGGLE_MODE) {
+                    if (left || right) toggleMode = !toggleMode;
+                } else if (sel == SETTING_USB_MODE) {
+                    if (left || right) usbMode = !usbMode;
+                }
+                dirty = true;
+            }
         }
 
-        if (M5Cardputer.Keyboard.isChange()) {
-            if (M5Cardputer.Keyboard.isPressed()) {
-                Keyboard_Class::KeysState status = M5Cardputer.Keyboard.keysState();
-
-                if(M5Cardputer.Keyboard.isKeyPressed('.') || M5Cardputer.Keyboard.isKeyPressed(';')) {
-                    usbMode = !usbMode;
-                }
-
-                if (status.enter) {
-                    break;
-                }
-            }
+        if (dirty) {
+            displaySettingsScreen(sel, mouseSensitivity, toggleMode, usbMode);
+            dirty = false;
         }
         delay(10);
     }
+
+    saveSettings();
 }
 
+// ── Init ──
 void setup() {
     auto cfg = M5.config();
     M5Cardputer.begin(cfg, true);
-    
+
+    loadSettings();
+
     if (M5.Imu.isEnabled()) {
         gyroAvailable = true;
         float dummy;
@@ -60,11 +114,11 @@ void setup() {
             delay(5);
         }
     }
-    
+
     setupDisplay();
     displayWelcomeScreen();
 
-    selectMode();
+    // Init selected mode
     if (usbMode) {
         USB.begin();
     } else {
@@ -74,10 +128,11 @@ void setup() {
     displayMainScreen(usbMode, mouseMode, getBluetoothStatus(), gyroAvailable && gyroMode);
 }
 
+// ── Main loop ──
 void loop() {
     M5Cardputer.update();
 
-    // Read IMU data if available
+    // IMU
     if (gyroAvailable) {
         float ax, ay, az;
         M5.Imu.update();
@@ -86,7 +141,7 @@ void loop() {
         tiltAngle = atan2(ay, az);
     }
 
-    // Activity detection: any key press or gyro movement = awake
+    // Activity / sleep
     bool anyKey = M5Cardputer.Keyboard.isPressed();
     bool gyroActive = gyroAvailable && (abs(gyroX) > 10 || abs(gyroY) > 10 || abs(gyroZ) > 10);
     if (anyKey || gyroActive || M5Cardputer.BtnA.isPressed()) {
@@ -96,47 +151,83 @@ void loop() {
             M5Cardputer.Display.setBrightness(128);
         }
     }
-
-    // Auto sleep
     if (screenOn && millis() - lastActivity > SLEEP_TIMEOUT) {
         screenOn = false;
         M5Cardputer.Display.setBrightness(0);
     }
-
     if (!screenOn) {
         delay(50);
         return;
     }
 
-    // For BT connection status change
+    // ── Go button → Settings ──
+    static bool goWasDown = false;
+    bool goDown = M5Cardputer.BtnA.isPressed();
+    if (goDown && !goWasDown) {
+        // De-init BT if active (USB stays on)
+        if (!usbMode) {
+            deinitBluetooth();
+            delay(100);
+        }
+
+        settingsPage();
+
+        // Re-init based on new usbMode
+        if (usbMode) {
+            // USB already running from init
+        } else {
+            initBluetooth();
+        }
+        displayMainScreen(usbMode, mouseMode, getBluetoothStatus(), gyroAvailable && gyroMode);
+        lastBluetoothStatus = getBluetoothStatus();
+        delay(200);
+        goWasDown = goDown;
+        return;
+    }
+    goWasDown = goDown;
+
+    // BT connection status
     auto bluetoothStatus = getBluetoothStatus();
     if (lastBluetoothStatus != bluetoothStatus) {
         modeIndicator(usbMode, bluetoothStatus);
         lastBluetoothStatus = bluetoothStatus;
     }
 
-    // Fn key: hold = mouse mode, release = keyboard mode; also enables gyro if IMU available
+    // ── Mouse/KB toggle ──
     Keyboard_Class::KeysState status = M5Cardputer.Keyboard.keysState();
     bool fnHeld = status.fn;
-    
-    if (fnHeld && !mouseMode) {
-        mouseMode = true;
-        drawDeviceRect(mouseMode);
-        drawHelpText(mouseMode);
-    } else if (!fnHeld && mouseMode) {
-        mouseMode = false;
-        drawDeviceRect(mouseMode);
-        drawHelpText(mouseMode);
+
+    if (toggleMode) {
+        // Press-toggle: each Fn press flips mouseMode
+        static bool fnWasDown = false;
+        if (fnHeld && !fnWasDown) {
+            mouseMode = !mouseMode;
+            drawDeviceRect(mouseMode);
+            drawHelpText(mouseMode, toggleMode);
+        }
+        fnWasDown = fnHeld;
+    } else {
+        // Hold: Fn held = mouse, release = keyboard
+        if (fnHeld && !mouseMode) {
+            mouseMode = true;
+            drawDeviceRect(mouseMode);
+            drawHelpText(mouseMode, toggleMode);
+        } else if (!fnHeld && mouseMode) {
+            mouseMode = false;
+            drawDeviceRect(mouseMode);
+            drawHelpText(mouseMode, toggleMode);
+        }
     }
-    
+
     gyroMode = gyroAvailable && fnHeld;
 
-    // Periodic battery update
+    // Battery
     if (millis() - lastBatteryDraw > 5000) {
         drawBattery();
         lastBatteryDraw = millis();
     }
 
+    // HID
     if (usbMode) {
         handleUsbMode(mouseMode, gyroMode);
     } else {

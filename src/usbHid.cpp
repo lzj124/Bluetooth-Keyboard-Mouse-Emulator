@@ -33,13 +33,13 @@ void usbMouse(bool gyroMode) {
     if (gyroMode) {
         // Gyroscope control: tilt device to move cursor
         const float DEADZONE = 5.0f;
-        const float SENSITIVITY = 0.15f;
+        float sens = mouseSensitivity * 0.03f;
 
         float rawX = gyroZ * cos(tiltAngle) + gyroY * sin(tiltAngle);
         float rawY = gyroX;
         if (abs(rawX) > DEADZONE || abs(rawY) > DEADZONE) {
-            moveX = (int)(-rawX * SENSITIVITY);
-            moveY = (int)(-rawY * SENSITIVITY);
+            moveX = (int)(-rawX * sens);
+            moveY = (int)(-rawY * sens);
         }
 
         // Button clicks still work in gyro mode
@@ -60,13 +60,14 @@ void usbMouse(bool gyroMode) {
     // Original arrow-key mouse control
     if (M5Cardputer.Keyboard.isPressed()) {
         Keyboard_Class::KeysState status = M5Cardputer.Keyboard.keysState();
+        float spd = (mouseSensitivity + 1) / 2;
 
         if (M5Cardputer.Keyboard.isKeyPressed('/')) {
-            moveX = 1;
+            moveX = (int)spd;
         } 
         
         if (M5Cardputer.Keyboard.isKeyPressed(',')) {
-            moveX = -1;
+            moveX = -(int)spd;
         }
 
         // clics souris

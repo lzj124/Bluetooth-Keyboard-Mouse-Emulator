@@ -10,6 +10,8 @@ extern float gyroY;
 extern float tiltAngle;
 extern float gyroZ;
 
+extern int mouseSensitivity;
+
 void usbMouse(bool gyroMode);
 void usbKeyboard();
 void handleUsbMode(bool mouseMode, bool gyroMode);
