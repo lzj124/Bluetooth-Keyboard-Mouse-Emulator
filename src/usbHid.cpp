@@ -1,4 +1,5 @@
 #include "usbHid.h"
+#include "gyroMouse.h"
 
 USBHIDMouse mouse;
 USBHIDKeyboard keyboard;
@@ -15,6 +16,16 @@ void handleUsbMode(bool mouseMode, bool gyroMode) {
 void usbMouse(bool gyroMode) {
     static bool mouseInited = false;
     if (!mouseInited) { mouse.begin(); mouseInited = true; }
+
+    // 切换陀螺仪/方向键模式时清掉滤波状态与按键沿状态，避免残留
+    static bool wasGyro = false;
+    static bool prevLeft = false, prevRight = false;
+    if (gyroMode != wasGyro) {
+        gyroMouse::reset();
+        prevLeft = prevRight = false;
+        wasGyro = gyroMode;
+    }
+
     int moveX = 0;
     int moveY = 0;
     int wheel = 0;
@@ -32,29 +43,29 @@ void usbMouse(bool gyroMode) {
     }
 
     if (gyroMode) {
-        // Gyroscope control: tilt device to move cursor
-        const float DEADZONE = 1.0f;
-        float sens = mouseSensitivity * 0.05f;
+        // ── 先处理按键：按下瞬间会带动整机震动 ──
+        Keyboard_Class::KeysState status = M5Cardputer.Keyboard.keysState();
+        bool left  = status.enter;
+        bool right = M5Cardputer.Keyboard.isKeyPressed('\\');
 
+        // 按下沿 → 锁定光标，避免「点击」被识别成「拖拽」
+        if ((left && !prevLeft) || (right && !prevRight)) {
+            gyroMouse::lock();
+        }
+        prevLeft  = left;
+        prevRight = right;
+        gyroMouse::setButtonDown(left || right);
+
+        if (left)  mouse.press(MOUSE_BUTTON_LEFT);  else mouse.release(MOUSE_BUTTON_LEFT);
+        if (right) mouse.press(MOUSE_BUTTON_RIGHT); else mouse.release(MOUSE_BUTTON_RIGHT);
+
+        // ── 再算位移：中值→限斜率→EMA→迟滞死区→亚像素累加 ──
         float rawX = gyroZ * cos(tiltAngle) + gyroY * sin(tiltAngle);
         float rawY = gyroX;
-        if (abs(rawX) > DEADZONE || abs(rawY) > DEADZONE) {
-            moveX = (int)(-rawX * sens);
-            moveY = (int)(-rawY * sens);
-        }
+        int dx = 0, dy = 0;
+        gyroMouse::update(rawX, rawY, mouseSensitivity, dx, dy);
 
-        // Button clicks still work in gyro mode
-        Keyboard_Class::KeysState status = M5Cardputer.Keyboard.keysState();
-        if (status.enter) {
-            mouse.press(MOUSE_BUTTON_LEFT);
-        } else if (M5Cardputer.Keyboard.isKeyPressed('\\')) {
-            mouse.press(MOUSE_BUTTON_RIGHT);
-        } else {
-            mouse.release(MOUSE_BUTTON_LEFT);
-            mouse.release(MOUSE_BUTTON_RIGHT);
-        }
-
-        mouse.move(moveX, moveY, wheel);
+        mouse.move((int8_t)dx, (int8_t)dy, (int8_t)wheel);
         return;
     }
 
@@ -78,6 +89,8 @@ void usbMouse(bool gyroMode) {
             mouse.press(MOUSE_BUTTON_RIGHT);
         }
         // Send
+        moveX = constrain(moveX, -127, 127);
+        moveY = constrain(moveY, -127, 127);
         mouse.move(moveX, moveY, wheel);
 
     } else {

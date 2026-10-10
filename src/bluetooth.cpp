@@ -1,5 +1,6 @@
 #include "bluetooth.h"
 #include "esp_gap_ble_api.h"
+#include "gyroMouse.h"
 
 BLEHIDDevice* hid;
 BLECharacteristic* mouseInput;
@@ -56,14 +57,34 @@ void bluetoothMouse(bool gyroMode) {
     int8_t wheel = 0;
     uint8_t buttons = 0;
 
+    // 切换陀螺仪/方向键模式时清掉滤波状态与按键沿状态
+    static bool wasGyro = false;
+    static bool prevLeft = false, prevRight = false;
+    if (gyroMode != wasGyro) {
+        gyroMouse::reset();
+        prevLeft = prevRight = false;
+        wasGyro = gyroMode;
+    }
+
     Keyboard_Class::KeysState status = M5Cardputer.Keyboard.keysState();
 
-    if (status.enter) {
+    bool leftClick  = status.enter;
+    bool rightClick = M5Cardputer.Keyboard.isKeyPressed('\\');
+
+    if (leftClick) {
         buttons |= 0x01;
     }
-    if (M5Cardputer.Keyboard.isKeyPressed('\\')) {
+    if (rightClick) {
         buttons |= 0x02;
     }
+
+    // 按下沿 → 锁定光标，避免「点击」被识别成「拖拽」
+    if ((leftClick && !prevLeft) || (rightClick && !prevRight)) {
+        gyroMouse::lock();
+    }
+    prevLeft  = leftClick;
+    prevRight = rightClick;
+    gyroMouse::setButtonDown(leftClick || rightClick);
 
     // Scroll wheel: ; = up, . = down (in any mouse mode) — 50ms cooldown
     static unsigned long lastWheelTime = 0;
@@ -78,15 +99,12 @@ void bluetoothMouse(bool gyroMode) {
     }
 
     if (gyroMode) {
-        const float DEADZONE = 1.0f;
-        float sens = mouseSensitivity * 0.05f;
-
         float rawX = gyroZ * cos(tiltAngle) + gyroY * sin(tiltAngle);
         float rawY = gyroX;
-        if (abs(rawX) > DEADZONE || abs(rawY) > DEADZONE) {
-            x = (int16_t)(-rawX * sens);
-            y = (int16_t)(-rawY * sens);
-        }
+        int dx = 0, dy = 0;
+        gyroMouse::update(rawX, rawY, mouseSensitivity, dx, dy);
+        x = (int16_t)dx;
+        y = (int16_t)dy;
     } else {
         float spd = (mouseSensitivity + 1) / 2;  // 1 ~ 5
         if (M5Cardputer.Keyboard.isKeyPressed('/')) {
