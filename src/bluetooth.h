@@ -13,7 +13,6 @@
 extern BLEHIDDevice* hid;
 extern BLECharacteristic* mouseInput;
 extern BLECharacteristic* keyboardInput;
-extern BLECharacteristic* pBattLevel;
 extern bool isConnected;
 
 extern float gyroX;
@@ -100,6 +99,17 @@ void initBluetooth();
 void deinitBluetooth();
 bool getBluetoothStatus();
 
+// ── 诊断（屏幕显示用）──
+bool btSubscribed(bool keyboard);   // 主机是否已订阅该输入报告（CCCD 是否被写）
+int  btNotifyOk();                  // notify 成功次数
+int  btNotifyErr();                 // notify 失败次数（含"未订阅"）
+
+// ── 主机槽位操作（P2）──
+bool btDisconnectCurrent();     // 断开当前连接（随后按当前槽重新广播）
+void btSwitchToSlot(int slot);  // 切换到指定槽：停广播 → 断开 → 白名单 → 广播
+void btForgetSlot(int slot);    // 删除该槽的配对信息并清空
+void btForgetAll();             // 删除全部槽位与配对
+
 void bluetoothMouse(bool gyroMode);
 void bluetoothKeyboard();
 void sendEmptyReports();
@@ -108,6 +118,7 @@ void handleBluetoothMode(bool mouseMode, bool gyroMode);
 class MyBLEServerCallbacks : public BLEServerCallbacks {
 public:
     void onConnect(BLEServer* pServer) override;
+    void onConnect(BLEServer* pServer, esp_ble_gatts_cb_param_t *param) override;
     void onDisconnect(BLEServer* pServer, esp_ble_gatts_cb_param_t *param) override;
 };
 

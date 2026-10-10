@@ -2,6 +2,7 @@
 #include "bluetooth.h"
 #include "display.h"
 #include "usbHid.h"
+#include "btHosts.h"
 #include <USB.h>
 #include <Preferences.h>
 
@@ -43,6 +44,62 @@ void saveSettings() {
     p.putBool("tgl", toggleMode);
     p.putBool("usb", usbMode);
     p.end();
+}
+
+// ── Hosts 子页：切换 / 断开 / 删除 ──
+void hostsPage() {
+    int sel = 0;
+    bool dirty = true;
+
+    while (true) {
+        M5Cardputer.update();
+
+        if (dirty) {
+            displayHostsScreen(sel);
+            dirty = false;
+        }
+
+        // Go 返回
+        if (M5Cardputer.BtnA.wasPressed()) break;
+
+        // 连接状态是异步变化的，定期刷新
+        static unsigned long lastRefresh = 0;
+        if (millis() - lastRefresh > 500) {
+            lastRefresh = millis();
+            dirty = true;
+        }
+
+        if (M5Cardputer.Keyboard.isChange() && M5Cardputer.Keyboard.isPressed()) {
+            Keyboard_Class::KeysState ks = M5Cardputer.Keyboard.keysState();
+
+            if (M5Cardputer.Keyboard.isKeyPressed(0x1B)) break;   // Esc 返回
+
+            if (M5Cardputer.Keyboard.isKeyPressed(';')) {
+                sel = (sel - 1 + HOSTS_ROW_COUNT) % HOSTS_ROW_COUNT;
+                dirty = true;
+            }
+            if (M5Cardputer.Keyboard.isKeyPressed('.')) {
+                sel = (sel + 1) % HOSTS_ROW_COUNT;
+                dirty = true;
+            }
+
+            if (M5Cardputer.Keyboard.isKeyPressed('d')) {
+                // d：删除选中槽（连带删除配对信息）
+                if (sel < BTHOST_SLOTS) btForgetSlot(sel);
+                dirty = true;
+            } else if (ks.enter) {
+                if (sel < BTHOST_SLOTS) {
+                    btSwitchToSlot(sel);          // 切到该槽（断开当前 → 只放行目标主机）
+                } else if (sel == HOSTS_ROW_DISCONNECT) {
+                    btDisconnectCurrent();
+                } else {
+                    btForgetAll();                // Forget all
+                }
+                dirty = true;
+            }
+        }
+        delay(10);
+    }
 }
 
 // ── Settings page ──
@@ -91,6 +148,12 @@ void settingsPage() {
                 }
                 dirty = true;
             }
+
+            // Enter：进入 Hosts 子菜单（需处于蓝牙模式）
+            if (ks.enter && sel == SETTING_HOSTS && !usbMode) {
+                hostsPage();
+                dirty = true;
+            }
         }
 
         if (dirty) {
@@ -109,6 +172,7 @@ void setup() {
     M5Cardputer.begin(cfg, true);
 
     loadSettings();
+    btHosts::begin();       // 载入 BLE 主机槽位（NVS namespace "bthost"）
 
     if (M5.Imu.isEnabled()) {
         gyroAvailable = true;
@@ -193,6 +257,18 @@ void loop() {
         lastBluetoothStatus = bluetoothStatus;
     }
 
+    // 主机槽位变化（配对成功/切槽）→ 刷新顶部指示
+    {
+        static int lastSlot = -1, lastUsed = -1;
+        int curSlot = btHosts::activeSlot();
+        int curUsed = btHosts::usedCount();
+        if (curSlot != lastSlot || curUsed != lastUsed) {
+            lastSlot = curSlot;
+            lastUsed = curUsed;
+            modeIndicator(usbMode, bluetoothStatus);
+        }
+    }
+
     // ── Mouse/KB toggle ──
     Keyboard_Class::KeysState status = M5Cardputer.Keyboard.keysState();
     bool fnHeld = status.fn;
@@ -225,11 +301,9 @@ void loop() {
     if (millis() - lastBatteryDraw > 5000) {
         drawBattery();
         lastBatteryDraw = millis();
-        // Sync battery level to BLE
-        if (!usbMode && pBattLevel) {
-            uint8_t batt = M5.Power.getBatteryLevel();
-            pBattLevel->setValue(&batt, 1);
-            pBattLevel->notify();
+        // Sync battery level to BLE（用 lib 自带的 Battery Service，不要重复建 0x180F）
+        if (!usbMode && hid != nullptr) {
+            hid->setBatteryLevel(M5.Power.getBatteryLevel());
         }
     }
 
